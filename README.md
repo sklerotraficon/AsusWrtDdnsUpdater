@@ -34,7 +34,7 @@ Typically, you would add a cron for running this script e.g. every hour
 
 ## Usage
 
-Without any parameters, the script runs (almost) silent and logs into the specified logfile
+Without any parameters, the script runs (almost) silent and logs into the specified logfile. The specified log file **must be writable**.
 
 A "verbose" switch is available by executing the script as follows:
 
