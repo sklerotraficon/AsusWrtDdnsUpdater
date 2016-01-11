@@ -44,4 +44,4 @@ A "verbose" switch is available by executing the script as follows:
 
 ## Caveats
 
-For now, Username and password are transferred by http and is **not encrypted** or **otherwise secure**, so please use at your own risk.
+For now, username and password are stored **unencrypted** or **otherwise secure** in the script, so please use at your own risk.
