@@ -4,7 +4,9 @@ A simple ddns-start skript for use with an Asus Router running AsusWrt by Merlin
 
 The script fetches the external IP and stores it locally in file and then updates this IP to dnsomatic, if and only if the fetched IP is different with the previous one stored in the file.
 
-This is useful, if your ISP uses a Carrier-grade NAT also known as CGN (Read more about it in wikipedia: https://en.wikipedia.org/wiki/Carrier-grade_NAT), where the WAN-IP issued to the router is not your actual external IP. For example, the german ISP Telecolumbus uses CNAT.
+This is useful, if your ISP uses a Carrier-grade NAT also known as CGN (Read more about it in wikipedia: https://en.wikipedia.org/wiki/Carrier-grade_NAT), where the WAN-IP issued to the router is not your actual external IP. 
+
+For example, the german ISP Telecolumbus uses CNAT.
  
 ## Requirements
 
