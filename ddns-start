@@ -1,0 +1,118 @@
+#!/bin/sh
+LOG_FILE=/var/log/ddns_start.log
+DDNS_SERVICE_HOST=updates.dnsomatic.com
+USERNAME=
+PASSWORD=
+HOSTNAME=all.dnsomatic.com
+IP_SERVICE_URL=ipecho.net/plain
+FILE=/tmp/last_external_ip
+LAST_EXTERNAL_IP=""
+SILENT=1
+
+checkArguments () {
+    if [ $1 ] && [ $1 -gt 1 -o $1 -lt 0 ]; then
+        log "  USAGE: ddns-start <verbose:0|1>" 1
+        log "  Argument error ...exiting" 1 
+        end
+    fi 
+    if [ $1 ] && [ $1 -eq 1 ]; then
+        SILENT=0
+    fi
+    if [ -z $USERNAME ] || [ -z $PASSWORD ]; then
+        log "  USERNAME and/or PASSWORD  for $DDNS_SERVICE_HOST not set in script, please set these variables accodingly, exiting... " 1
+        end
+    fi
+}
+
+checkIp () {
+    IP=$1
+    if expr "$IP" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+        for i in 1 2 3 4; do
+            if [ $(echo "$IP" | cut -d. -f$i) -gt 255 ]; then
+                log "  An IP-segment of: $IP from $2 exceeds 255, exiting..." 1
+                end 
+            fi
+        done
+         log "  IP: $IP has valid format, continuing..."
+    else
+    	log "   IP from $2: $IP is invalid, exiting..." 1
+        end
+    fi
+}
+
+fetchCurrentIp () {
+    CURRENT_EXTERNAL_IP=$(curl -sS $IP_SERVICE_URL)
+
+    log "  Got current external IP $CURRENT_EXTERNAL_IP from $IP_SERVICE_URL"
+    checkIp "$CURRENT_EXTERNAL_IP" "$IP_SERVICE_URL"
+}
+
+start () {
+    if [ $SILENT -eq 1 ]; then
+        log "START SILENTLY..." 1
+    else
+        log "START..."
+    fi
+}
+
+end () {
+    log "...END" 1
+    exit 0
+}
+
+log () {
+    if [ -z "$2" ];then
+        OVERRIDE_SILENT=0
+    else
+        OVERRIDE_SILENT=1
+    fi
+    if [ $SILENT -eq 0 ] || [ $OVERRIDE_SILENT -eq 1 ];then
+        MESSAGE=$1
+        NOW=$(date)
+        echo "$NOW: $MESSAGE" >> $LOG_FILE
+    fi
+}
+
+executeUpdate () {
+    RESULT=$(/usr/sbin/curl -k --silent "https://$USERNAME:$PASSWORD@$DDNS_SERVICE_HOST/nic/update?hostname=$HOSTNAME&wildcard=NOCHG&mx=NOCHG&backmx=NOCHG&myip=
+    $CURRENT_EXTERNAL_IP")
+    #RESULT="Would have updated with $CURRENT_EXTERNAL_IP..."
+    log "  Result from $DDNS_SERVICE_HOST: $RESULT"
+    if [ $? -eq 0 ]; then
+      /sbin/ddns_custom_updated 1
+    else
+     /sbin/ddns_custom_updated 0
+    fi
+
+    log "  Writing new IP $CURRENT_EXTERNAL_IP to $FILE"
+    echo $CURRENT_EXTERNAL_IP > $FILE
+}
+
+readLastExternalIpFromFile () {
+    if [ -e $FILE ]; then
+        LAST_EXTERNAL_IP=$(head -n 1 $FILE)
+        log "  Got last external IP $LAST_EXTERNAL_IP from file: $FILE"
+        checkIp "$LAST_EXTERNAL_IP" "file"
+    else
+        log "  File $FILE not existing..."
+    fi
+}
+
+compareLastAndCurrentIp () {
+    if [ -z $LAST_EXTERNAL_IP ]; then
+        log "  Initially updating dnsomatic with current IP $CURRENT_EXTERNAL_IP" 1
+    elif [ $LAST_EXTERNAL_IP == $CURRENT_EXTERNAL_IP ]; then
+        log "  No IP change, LAST: $LAST_EXTERNAL_IP Current: $CURRENT_EXTERNAL_IP, skipping update and exiting" 1
+        end
+    else
+        log "  IP change detected, LAST: $LAST_EXTERNAL_IP Current: $CURRENT_EXTERNAL_IP, updating dnsomatic" 1
+    fi
+}
+
+start
+checkArguments $1
+fetchCurrentIp
+readLastExternalIpFromFile
+compareLastAndCurrentIp
+executeUpdate
+end 
